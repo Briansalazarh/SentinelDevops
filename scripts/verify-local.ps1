@@ -1,0 +1,6 @@
+Write-Host "Verificando endpoints y configuración local..."
+Write-Host "1. Levanta Kafka: docker compose up -d"
+Write-Host "2. Crea topics: .\scripts\create-topics.ps1"
+Write-Host "3. Exporta variables desde .env.example con tus valores reales"
+Write-Host "4. Ejecuta: mvn test"
+Write-Host "5. Arranca: mvn spring-boot:run -Dspring-boot.run.profiles=local"

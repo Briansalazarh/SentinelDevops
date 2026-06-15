@@ -1,0 +1,19 @@
+{
+  "eventId": "11111111-1111-1111-1111-111111111111",
+  "timestamp": "2026-06-14T12:00:00Z",
+  "tenantId": "tenant-demo",
+  "agentMetadata": {
+    "agentId": "agent-ops-001",
+    "version": "1.0.0",
+    "targetModel": "gpt-4.1",
+    "temperature": 0.2,
+    "systemPrompt": "You are a secure assistant.",
+    "assignedTools": ["search", "calculator"]
+  },
+  "samplePayloads": [
+    {
+      "userInput": "hola",
+      "agentOutput": "respuesta"
+    }
+  ]
+}
