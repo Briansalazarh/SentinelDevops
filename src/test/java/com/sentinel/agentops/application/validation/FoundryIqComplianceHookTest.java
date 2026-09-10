@@ -10,10 +10,15 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.aop.AopAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.client.RestClientTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.retry.annotation.EnableRetry;
+import org.springframework.retry.annotation.RetryConfiguration;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
 
 import java.math.BigDecimal;
@@ -28,6 +33,8 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 @RestClientTest(FoundryIqComplianceHook.class)
+@EnableRetry
+@Import({RetryConfiguration.class, AopAutoConfiguration.class})
 @TestPropertySource(properties = {
     "microsoft.iq.foundry.endpoint=http://foundry.test/v1",
     "microsoft.iq.foundry.api-key=test-key"
@@ -90,10 +97,10 @@ class FoundryIqComplianceHookTest {
     }
 
     @Test
-    void analyze_debeDegradarGracefully_cuandoFoundryIqFalla() {
-        log.info("Ejecutando escenario 3: degradacion elegante ante falla de red");
+    void analyze_debeReintentarYDegradarGracefully_cuandoFoundryIqFalla() {
+        log.info("Ejecutando escenario 3: reintentos con Spring Retry y degradacion elegante ante falla de red");
 
-        server.expect(requestTo("http://foundry.test/v1/policies/evaluate"))
+        server.expect(ExpectedCount.times(3), requestTo("http://foundry.test/v1/policies/evaluate"))
             .andExpect(method(HttpMethod.POST))
             .andRespond(withServerError());
 

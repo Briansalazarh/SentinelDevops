@@ -1,0 +1,41 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${KAFKA_GROUP_ID:sentinel-agentops-assessments-dev}
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+    producer:
+      acks: all
+      retries: 3
+      properties:
+        max.in.flight.requests.per.connection: 5
+        enable.idempotence: true
+    listener:
+      ack-mode: manual_immediate
+
+sentinel:
+  kafka:
+    topics:
+      assessments: ${SENTINEL_KAFKA_TOPIC_ASSESSMENTS:sentinel.agents.assessments-dev}
+      assessments-dlt: ${SENTINEL_KAFKA_TOPIC_DLT:sentinel.agents.assessments-dev.DLT}
+      partitions: 3
+      replication-factor: 1
+    listener:
+      concurrency: ${KAFKA_CONCURRENCY:4}
+  cosmos:
+    endpoint: ${COSMOS_ENDPOINT:https://YOUR-COSMOS-DEV-ACCOUNT.documents.azure.com:443/}
+    key: ${COSMOS_KEY:}
+    database: ${COSMOS_DATABASE:sentinel-agentops-dev}
+    container: ${COSMOS_CONTAINER:agent-assessments}
+    request-timeout: 10s
+    connect-timeout: 5s
+
+microsoft:
+  iq:
+    foundry:
+      endpoint: ${MICROSOFT_IQ_FOUNDRY_ENDPOINT:https://api.foundry.microsoft.com/v1}
+      api-key: ${MICROSOFT_IQ_FOUNDRY_API_KEY:dev-key}

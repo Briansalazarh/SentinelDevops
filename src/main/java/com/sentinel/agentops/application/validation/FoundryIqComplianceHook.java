@@ -11,6 +11,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -19,7 +22,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 @Component
@@ -42,30 +44,50 @@ public class FoundryIqComplianceHook implements AssessmentValidationHook {
     }
 
     @Override
+    @Retryable(
+        retryFor = { RestClientException.class },
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2.0)
+    )
     public List<AssessmentFinding> analyze(AgentAssessmentRequested request) {
-        try {
-            FoundryIqEvaluateResponse response = restClient.post()
-                .uri("/policies/evaluate")
-                .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.APPLICATION_JSON)
-                .body(new FoundryIqEvaluateRequest(
-                    new FoundryIqMetaProfile(
-                        request.agentMetadata().systemPrompt(),
-                        request.agentMetadata().assignedTools(),
-                        request.agentMetadata().targetModel())))
-                .retrieve()
-                .body(FoundryIqEvaluateResponse.class);
+        log.debug("Iniciando evaluacion de compliance en Foundry IQ para tenantId={} eventId={}", request.tenantId(), request.eventId());
 
-            return mapComplianceViolations(response);
-        } catch (RestClientException ex) {
-            log.warn("Foundry IQ no disponible para tenantId={} eventId={}", request.tenantId(), request.eventId(), ex);
-            return List.of(new AssessmentFinding(
-                AssessmentCategory.COMPLIANCE,
-                AssessmentSeverity.MEDIUM,
-                "Foundry IQ service is offline or unreachable; compliance audit was skipped.",
-                getClass().getSimpleName(),
-                Instant.now()));
-        }
+        FoundryIqEvaluateResponse response = restClient.post()
+            .uri("/policies/evaluate")
+            .contentType(MediaType.APPLICATION_JSON)
+            .accept(MediaType.APPLICATION_JSON)
+            .body(new FoundryIqEvaluateRequest(
+                new FoundryIqMetaProfile(
+                    request.agentMetadata().systemPrompt(),
+                    request.agentMetadata().assignedTools(),
+                    request.agentMetadata().targetModel())))
+            .retrieve()
+            .body(FoundryIqEvaluateResponse.class);
+
+        return mapComplianceViolations(response);
+    }
+
+    @Recover
+    public List<AssessmentFinding> recover(RestClientException ex, AgentAssessmentRequested request) {
+        log.warn("Foundry IQ degradacion segura activada para tenantId={} eventId={} tras reintentos: {}",
+            request.tenantId(), request.eventId(), ex.getMessage());
+        return createFallbackFinding();
+    }
+
+    @Recover
+    public List<AssessmentFinding> recover(Throwable ex, AgentAssessmentRequested request) {
+        log.warn("Foundry IQ fallo no esperado para tenantId={} eventId={} tras reintentos: {}",
+            request.tenantId(), request.eventId(), ex.getMessage());
+        return createFallbackFinding();
+    }
+
+    private List<AssessmentFinding> createFallbackFinding() {
+        return List.of(new AssessmentFinding(
+            AssessmentCategory.COMPLIANCE,
+            AssessmentSeverity.MEDIUM,
+            "Foundry IQ service is offline or unreachable; compliance audit was skipped.",
+            getClass().getSimpleName(),
+            Instant.now()));
     }
 
     private List<AssessmentFinding> mapComplianceViolations(FoundryIqEvaluateResponse response) {
