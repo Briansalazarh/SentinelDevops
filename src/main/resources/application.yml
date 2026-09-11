@@ -1,6 +1,8 @@
 spring:
   application:
     name: sentinel-agentops
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
   threads:
     virtual:
       enabled: true
@@ -16,8 +18,11 @@ spring:
       properties:
         isolation.level: read_committed
     producer:
-      acks: all
-      retries: 3
+      acks: ${KAFKA_PRODUCER_ACKS:all}
+      retries: ${KAFKA_PRODUCER_RETRIES:5}
+      properties:
+        max.in.flight.requests.per.connection: ${KAFKA_PRODUCER_MAX_IN_FLIGHT:5}
+        enable.idempotence: ${KAFKA_PRODUCER_ENABLE_IDEMPOTENCE:true}
     listener:
       ack-mode: manual_immediate
       missing-topics-fatal: false
@@ -34,10 +39,10 @@ management:
 sentinel:
   kafka:
     topics:
-      assessments: sentinel.agents.assessments
-      assessments-dlt: sentinel.agents.assessments.DLT
-      partitions: 6
-      replication-factor: 1
+      assessments: ${SENTINEL_KAFKA_TOPIC_ASSESSMENTS:sentinel.agents.assessments}
+      assessments-dlt: ${SENTINEL_KAFKA_TOPIC_DLT:sentinel.agents.assessments.DLT}
+      partitions: ${SENTINEL_KAFKA_PARTITIONS:6}
+      replication-factor: ${SENTINEL_KAFKA_REPLICATION_FACTOR:1}
     listener:
       concurrency: ${KAFKA_CONCURRENCY:8}
     retry:
@@ -48,15 +53,15 @@ sentinel:
       auto-create-topics: true
   cosmos:
     endpoint: ${COSMOS_ENDPOINT:http://localhost:8081}
-    key: ${COSMOS_KEY:}
+    key: ${COSMOS_KEY:C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+wtQUy4AQMQ9hfhE5D/6xf8q8ijA==}
     database: ${COSMOS_DATABASE:sentinel-agentops}
     container: ${COSMOS_CONTAINER:agent-assessments}
-    request-timeout: 10s
-    connect-timeout: 5s
-    idle-connection-timeout: 30s
-    idle-endpoint-timeout: 60s
-    max-connections-per-endpoint: 500
-    max-requests-per-connection: 50
+    request-timeout: ${COSMOS_REQUEST_TIMEOUT:10s}
+    connect-timeout: ${COSMOS_CONNECT_TIMEOUT:5s}
+    idle-connection-timeout: ${COSMOS_IDLE_CONN_TIMEOUT:30s}
+    idle-endpoint-timeout: ${COSMOS_IDLE_ENDPOINT_TIMEOUT:60s}
+    max-connections-per-endpoint: ${COSMOS_MAX_CONNECTIONS:500}
+    max-requests-per-connection: ${COSMOS_MAX_REQUESTS:50}
 
 microsoft:
   iq:

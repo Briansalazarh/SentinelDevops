@@ -34,11 +34,17 @@ public class KafkaConfiguration {
     public DefaultKafkaProducerFactory<String, AgentAssessmentRequested> agentAssessmentProducerFactory(
         ObjectMapper sentinelObjectMapper,
         @Value("${spring.kafka.bootstrap-servers}") String bootstrapServers,
-        @Value("${spring.kafka.producer.acks:all}") String acks) {
+        @Value("${spring.kafka.producer.acks:all}") String acks,
+        @Value("${spring.kafka.producer.retries:5}") int retries,
+        @Value("${spring.kafka.producer.properties.max.in.flight.requests.per.connection:5}") int maxInFlightRequestsPerConnection,
+        @Value("${spring.kafka.producer.properties.enable.idempotence:true}") boolean enableIdempotence) {
 
         Map<String, Object> producerProps = new HashMap<>();
         producerProps.put(org.apache.kafka.clients.CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         producerProps.put(ProducerConfig.ACKS_CONFIG, acks);
+        producerProps.put(ProducerConfig.RETRIES_CONFIG, retries);
+        producerProps.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, maxInFlightRequestsPerConnection);
+        producerProps.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, enableIdempotence);
         producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
         return new DefaultKafkaProducerFactory<>(producerProps, new StringSerializer(), new JsonSerializer<>(sentinelObjectMapper));
